@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Technical stack
+
+- Python for the backend
+- Browser Automation: Playwright
+- Vision LLM: GPT-4 with vision
+- Storage: Use MongoDB for flexible document-based storage of UI elements, test cases, and analysis metadata. Use Redis v6+ for caching recently crawled pages and managing rate-limiting state
+- Deployment: Docker, Kubernetes
+- Logging: Use Loguru for structured and readable logging in Python, logtail For centralized log aggregation, search, and alerting (start with Logtail for free-tier usability)
+- Logging Level Rules: info: Document page processing stages (e.g., DOM loaded, LLM output received). warning: Retryable failures (e.g., timeout). error: Non-retryable errors (e.g., malformed DOM, invalid token)
+- Bug Tracking: sentry.io: Use Sentry for real-time exception tracking and performance monitoring
+- Python tests
+

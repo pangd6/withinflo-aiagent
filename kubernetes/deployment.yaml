@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qa-doc-generator-api
+  labels:
+    app: qa-doc-generator
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: qa-doc-generator
+      component: api
+  template:
+    metadata:
+      labels:
+        app: qa-doc-generator
+        component: api
+    spec:
+      containers:
+      - name: api
+        image: ${DOCKER_REGISTRY}/qa-doc-generator:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: API_HOST
+          value: "0.0.0.0"
+        - name: API_PORT
+          value: "8000"
+        - name: MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: qa-doc-generator-secrets
+              key: mongodb-uri
+        - name: MONGODB_DB
+          value: "qa_doc_generator"
+        - name: REDIS_URI
+          valueFrom:
+            secretKeyRef:
+              name: qa-doc-generator-secrets
+              key: redis-uri
+        - name: CELERY_BROKER_URL
+          valueFrom:
+            secretKeyRef:
+              name: qa-doc-generator-secrets
+              key: redis-uri
+        - name: CELERY_RESULT_BACKEND
+          valueFrom:
+            secretKeyRef:
+              name: qa-doc-generator-secrets
+              key: redis-uri
+        - name: LLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: qa-doc-generator-secrets
+              key: llm-api-key
+        - name: LLM_MODEL
+          value: "gpt-4"
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qa-doc-generator-worker
+  labels:
+    app: qa-doc-generator
+    component: worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: qa-doc-generator
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: qa-doc-generator
+        component: worker
+    spec:
+      containers:
+      - name: worker
+        image: ${DOCKER_REGISTRY}/qa-doc-generator:latest
+        command: ["celery", "-A", "src.worker.tasks.celery_app", "worker", "--loglevel=info"]
+        env:
+        - name: MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: qa-doc-generator-secrets
+              key: mongodb-uri
+        - name: MONGODB_DB
+          value: "qa_doc_generator"
+        - name: REDIS_URI
+          valueFrom:
+            secretKeyRef:
+              name: qa-doc-generator-secrets
+              key: redis-uri
+        - name: CELERY_BROKER_URL
+          valueFrom:
+            secretKeyRef:
+              name: qa-doc-generator-secrets
+              key: redis-uri
+        - name: CELERY_RESULT_BACKEND
+          valueFrom:
+            secretKeyRef:
+              name: qa-doc-generator-secrets
+              key: redis-uri
+        - name: LLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: qa-doc-generator-secrets
+              key: llm-api-key
+        - name: LLM_MODEL
+          value: "gpt-4"
+        resources:
+          limits:
+            cpu: "2"
+            memory: "2Gi"
+          requests:
+            cpu: "1"
+            memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qa-doc-generator-api
+  labels:
+    app: qa-doc-generator
+    component: api
+spec:
+  selector:
+    app: qa-doc-generator
+    component: api
+  ports:
+  - port: 80
+    targetPort: 8000
+  type: ClusterIP 
